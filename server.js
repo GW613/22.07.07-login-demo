@@ -23,9 +23,9 @@ var server = http.createServer(function(request, response){
 
   if(path === '/'){
     response.statusCode = 200
+var string = fs.readFileSync('./index.html')
     response.setHeader('Content-Type', 'text/html;charset=utf-8')
-    response.write(`二哈`)
-    response.end()
+    response.end(string)
   } else {
     response.statusCode = 404
     response.setHeader('Content-Type', 'text/html;charset=utf-8')
