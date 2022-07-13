@@ -23,13 +23,13 @@
     <form name="signUp" action="/signUp" method="post">
         <div><label>邮箱
             <input type="text" name="email">
-        </label> </div>
+        </label> <span name="email_error" class="error"></span></div>
         <div><label> 密码
             <input type="password" name="password">
-        </label>  </div>
+        </label> <span name="password_error" class="error"></span> </div>
         <div><label>确认密码
             <input type="password" name="password_confirmation">
-        </label>     </div>
+        </label>  <span name="password_confirmation_error" class="error"></span>   </div>
         <div><input type="submit" value="注册"> </div>
 </form>
 </section>

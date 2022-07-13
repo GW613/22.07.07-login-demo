@@ -31,7 +31,7 @@ var string = fs.readFileSync('./index.html')
       let {email,password,password_confirmation} = postData
       let errors = {}
      //check
-     if(email.indexOf('@' <=0)) {
+     if(email.indexOf('@') <=0) {
        errors.email = '邮箱不合法'
      }
      if(password.length<8){
@@ -44,7 +44,11 @@ var string = fs.readFileSync('./index.html')
       response.end(JSON.stringify(errors))
     })
     //获取post数据
-  } else {
+  }else if(path ==='/main.js'){
+     let string = fs.readFileSync('./main.js')
+      response.setHeader('Content-Type','application/javascript;charset=utf-8')
+      response.end(string)
+  }else {
     response.statusCode = 404
     response.setHeader('Content-Type', 'text/html;charset=utf-8')
     response.write(`你输入的路径不存在对应的内容`)
@@ -64,8 +68,8 @@ function getPostData(request,callback){
     let postData = {}
     for(i=0;i<array.length;i++){
      let parts = array[i].split('=')
-      let key =parts[0]
-      let value = parts[1]
+      let key =decodeURIComponent(parts[0])
+      let value =decodeURIComponent( parts[1])
       postData[key]=value
     }
    callback.call(null,postData)
