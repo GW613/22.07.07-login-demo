@@ -28,27 +28,66 @@ var string = fs.readFileSync('./index.html')
     response.end(string)
   }else if(path === '/signUp' && method === 'POST'){
     getPostData(request,function(postData){
-      let {email,password,password_confirmation} = postData
-      let errors = {}
-     //check
-     if(email.indexOf('@') <=0) {
-       errors.email = '邮箱不合法'
-     }
-     if(password.length<8){
-       errors.password='密码太少'
-     }
-     if(password_confirmation !== password){
-       errors.password_confirmation = '两次密码不一致'
-     }
-     response.setHeader('content-Type','text/html;charset=utf8')
+     let errors=checkPostData(postData)
+        if (Object.keys(errors).length === 0){
+            //数据库
+            let {email,password} = postData
+            let user= {
+                email: email,
+                passwordHash: GWHash(password)
+            }
+            //写入数据
+            let dbString = fs.readFileSync('./db.json','utf-8')
+            let dbObject = JSON.parse(dbString)
+            dbObject.users.push(user)
+            let dbString2 = JSON.stringify(dbObject)
+            fs.writeFileSync('./db.json',dbString2,{encoding:'utf-8'})
+        }else{
+            response.statusCode=400
+        }
+     response.setHeader('content-Type','text/html;charset=utf-8')
       response.end(JSON.stringify(errors))
     })
     //获取post数据
+  }else if(path ==='/login' && method === 'POST'){
+      getPostData(request,(postData)=>{
+          let dbString = fs.readFileSync('./db.json','utf-8')
+          let dbObject =JSON.parse(dbString)
+          let users = dbObject.users
+
+          let {email,password} =postData
+          let found
+          for(let i=0;i<users.length;i++){
+              if(users[i].email ===email && users[i].passwordHash ===GWHash(password)){
+               found = users[i]
+                  break
+              }
+          }
+          if(found){
+        //标记用户已经登录过了（cookie）
+              response.setHeader('set-cookie',['logined=true;expires=100;path=/','user_id='+email+';expires=12345678;path=/;'])
+              response.end('')
+          }else{
+              response.statusCode =400
+              response.setHeader('content-Type','text/html;charset=utf-8')
+              let errors ={email:'没有注册或密码错误'}
+              response.end(JSON.stringify(errors))
+          }
+      })
   }else if(path ==='/main.js'){
      let string = fs.readFileSync('./main.js')
       response.setHeader('Content-Type','application/javascript;charset=utf-8')
       response.end(string)
-  }else {
+  }else if(path ==='/home'){
+      let cookies = parseCookies(request.headers.cookie)
+      response.setHeader('Content-Type', 'text/html;charset=utf-8')
+      if (cookies.logined ==='true'){
+         response.end(`${cookies.user_id}已登录`)
+      }else{
+          let string = fs.readFileSync('./home')
+          response.end(string)
+      }
+    }else {
     response.statusCode = 404
     response.setHeader('Content-Type', 'text/html;charset=utf-8')
     response.write(`你输入的路径不存在对应的内容`)
@@ -66,7 +105,7 @@ function getPostData(request,callback){
   request.on('end',()=>{
     let array =data.split('&')
     let postData = {}
-    for(i=0;i<array.length;i++){
+    for(let i=0;i<array.length;i++){
      let parts = array[i].split('=')
       let key =decodeURIComponent(parts[0])
       let value =decodeURIComponent( parts[1])
@@ -74,6 +113,47 @@ function getPostData(request,callback){
     }
    callback.call(null,postData)
   })
+}
+
+function checkPostData(postData){
+    let {email,password,password_confirmation} = postData
+    let errors = {}
+    //check
+    if(email.indexOf('@') <=0) {
+        errors.email = '邮箱不合法'
+    }
+    if(password.length<8){
+        errors.password='密码太少'
+    }
+    if(password_confirmation !== password){
+        errors.password_confirmation = '两次密码不一致'
+    }
+    return errors
+}
+
+function GWHash (string){
+    return 'GW'+string+'GW'
+}
+
+function parseCookies(cookie){
+    return cookie.split(';').reduce(
+        function(prev,curr){
+            let m = / *([^=]+)=(.*)/.exec(curr)
+            let key =m[1]
+            let value = decodeURIComponent(m[2])
+             prev[key] = value
+            return prev
+        },
+        { }
+    )
+}
+
+function stringifyCookies(cookies){
+    let list =  []
+    for (let key in cookies){
+        list.push(key + '=' + encodeURIComponent(cookies[key]))
+    }
+    return list.join(';')
 }
 
 server.listen(port)
